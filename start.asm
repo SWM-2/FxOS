@@ -10,51 +10,47 @@ section .magic
 
 section .text
 
-%ifdef PAGED
-    PAGE_OFF equ 0xFFC00000
-%else
-    PAGE_OFF equ 0
-%endif 
-
-PAGE_TAB equ 0
-PAGE_DIR equ 1023
-
 global start
-
 start:
-  
     mov esp, stack_space
     cmp eax, 0x2badb002
-    jne 
+    mov al, '@'
+    call putc 
     jmp $
     hlt
 
-saveeax: dd 0
-saveebx: dd 0
-
-global cpuid_vstr
-cpuid_vstr:
-    mov edi, [esp + 4]
-    pusha
-    mov eax, 0x0
-    cpuid
-    mov [edi], ebx
-    mov [edi+4], edx
-    mov [edi+8], ecx
-    popa
-    ret
-
-color: db 0x0E
-
 ;AL = Character
 putc:
-    mov edi, 0xB8000
-    or 
-    inc word [cursorX]
+    cmp al, 0x0D
+    je .nl
+    push eax
+
+    mov eax, [cursorY]
+    mov dx, 80
+    mul dx
+    add eax, [cursorX]
+    lea edi, [0xB8000 + eax*2]
+
+    pop eax
+
+    mov [edi], al
+    mov al, [color]
+    mov [edi+1], al
+
+    inc dword [cursorX]
+    cmp [cursorX], dword 79
+    jg .nl
+
+    ret
+    .nl:
+        mov [cursorX], dword 0
+        inc dword [cursorY]
+        ret
 
 section .data
-cursorX: dw 0
-cursorY: dw 0
+cursorX: dd 0
+cursorY: dd 0
+color: db 0x0E
 
 section .bss
 resb 8192
